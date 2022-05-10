@@ -69,17 +69,36 @@ public class VideoService {
         executor.createJob(builder).run();
     }
 
-    public void merge(String inputPath, String outputPath) throws IOException {
+    public void cut(MultipartFile file, String newPath) throws IOException {
+        String filePath = save(file);
+
         FFmpegBuilder builder = new FFmpegBuilder()
                 .overrideOutputFiles(true)
-                .addInput(inputPath)
-                .addExtraArgs("-f", "concat")
-                .addExtraArgs("-safe", "0")
-                .addOutput(outputPath + "mergeVideo.mp4")
+                .setInput(filePath)
+                .addExtraArgs("-ss", "00:00:05")
+                .addExtraArgs("-t", "00:00:06")
+                .addOutput(newPath)
+                .setVideoCodec("copy")
+                .setAudioCodec("copy")
                 .done();
-
         FFmpegExecutor executor = new FFmpegExecutor(ffmpeg, ffprobe);
         executor.createJob(builder).run();
-
     }
+
+    public void merge(MultipartFile file1, MultipartFile file2, String newPath) throws IOException {
+        String filePath1 = save(file1);
+        String filePath2 = save(file2);
+
+        FFmpegBuilder builder = new FFmpegBuilder()
+                .overrideOutputFiles(true)
+                .setInput(filePath1)
+                .setInput(filePath2)
+                .addExtraArgs("-f", "concat")
+                .addExtraArgs("-safe", "0")
+                .addOutput(newPath)
+                .done();
+        FFmpegExecutor executor = new FFmpegExecutor(ffmpeg, ffprobe);
+        executor.createJob(builder).run();
+    }
+
 }
