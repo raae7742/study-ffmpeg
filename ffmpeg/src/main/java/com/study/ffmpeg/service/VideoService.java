@@ -5,9 +5,11 @@ import net.bramp.ffmpeg.FFmpegExecutor;
 import net.bramp.ffmpeg.FFprobe;
 import net.bramp.ffmpeg.builder.FFmpegBuilder;
 import net.bramp.ffmpeg.probe.FFmpegProbeResult;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.annotation.PostConstruct;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
@@ -15,18 +17,34 @@ import java.util.HashMap;
 @Service
 public class VideoService {
     private static final String SAVING_PATH = "C:\\Users\\hyeon\\Documents\\study-ffmpeg\\img\\";
+    @Value("${ffmpeg.ffmpeg_path}")
+    private String ffmpegPath;
+    @Value("${ffmpeg.ffprobe_path}")
+    private String ffprobePath;
 
-    public void save(MultipartFile file) throws IOException {
+    private FFmpeg ffmpeg;
+    private FFprobe ffprobe;
+
+    @PostConstruct
+    public void init() {
+        try {
+            ffmpeg = new FFmpeg(ffmpegPath);
+            ffprobe = new FFprobe(ffprobePath);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public String save(MultipartFile file) throws IOException {
         file.transferTo(new File(SAVING_PATH + file.getOriginalFilename()));
+
+        return SAVING_PATH + file.getOriginalFilename();
     }
 
     public HashMap<String, String> readInfo(MultipartFile file) throws IOException {
-        save(file);
+        String filePath = save(file);
 
-        FFmpeg ffmpeg = new FFmpeg("C:/ProgramData/chocolatey/bin/ffmpeg");
-        FFprobe ffprobe = new FFprobe("C:/ProgramData/chocolatey/bin/ffprobe");
-
-        FFmpegProbeResult probeResult = ffprobe.probe(SAVING_PATH + file.getOriginalFilename());
+        FFmpegProbeResult probeResult = ffprobe.probe(filePath);
 
         HashMap<String, String> response = new HashMap<>();
         response.put("bit_rate", String.valueOf(probeResult.getStreams().get(0).bit_rate));
@@ -37,10 +55,21 @@ public class VideoService {
         return response;
     }
 
-    public void merge(String inputPath, String outputPath) throws IOException {
-        FFmpeg ffmpeg = new FFmpeg("C:/ProgramData/chocolatey/bin/ffmpeg");
-        FFprobe ffprobe = new FFprobe("C:/ProgramData/chocolatey/bin/ffprobe");
+    public void createThumbnail(MultipartFile file, String thumbnailPath) throws IOException {
+        String filePath = save(file);
 
+        FFmpegBuilder builder = new FFmpegBuilder()
+                .overrideOutputFiles(true)
+                .setInput(filePath)
+                .addExtraArgs("-ss", "00:00:05")
+                .addOutput(thumbnailPath)
+                .setFrames(1)
+                .done();
+        FFmpegExecutor executor = new FFmpegExecutor(ffmpeg, ffprobe);
+        executor.createJob(builder).run();
+    }
+
+    public void merge(String inputPath, String outputPath) throws IOException {
         FFmpegBuilder builder = new FFmpegBuilder()
                 .overrideOutputFiles(true)
                 .addInput(inputPath)

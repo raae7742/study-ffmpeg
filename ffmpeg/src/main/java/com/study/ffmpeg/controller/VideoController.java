@@ -2,10 +2,7 @@ package com.study.ffmpeg.controller;
 
 import com.study.ffmpeg.service.VideoService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -20,5 +17,10 @@ public class VideoController {
     @PostMapping("/read")
     public HashMap<String, String> read(@RequestParam("file") MultipartFile file) throws IOException {
         return videoService.readInfo(file);
+    }
+
+    @PostMapping("/thumbnail")
+    public void createThumbnail(@RequestParam("file") MultipartFile file, @RequestParam String thumbnail_path) throws IOException {
+        videoService.createThumbnail(file, thumbnail_path);
     }
 }
